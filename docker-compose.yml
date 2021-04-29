@@ -1,0 +1,67 @@
+version: "3.3"
+
+services:
+  nginx:
+    image: nginx:1.17.10
+    container_name: reverse-proxy
+    restart: always
+    depends_on: 
+      # - aareon-client
+      - server
+    volumes: 
+      - ./reverse-proxy/:/etc/nginx/
+    ports: 
+      - "80:80"
+    networks: 
+      - frontend
+    restart: on-failure
+
+  mongo:
+    image: mongo:3.6.23-xenial
+    ports:
+      - 27017
+    networks: 
+      - backend
+    volumes:
+      - ./data:/data/db
+  client:
+    image: "client"
+    build: 
+      context: ./client/
+    ports:
+      - 3000:3000
+    depends_on: 
+      - server
+    stdin_open: true
+    tty: true
+    networks: 
+      - frontend
+    restart: always
+    environment: 
+      - PRODUCTION=false
+      - CHOKIDAR_USEPOLLING=true
+    volumes:
+      - ./client:/usr/src/app/my-app
+      - /usr/src/app/my-app/node_modules
+      
+  server:
+    image: "aareon-server"
+    build: 
+      context: ./server/
+    ports:
+      - 3030
+    networks: 
+      - frontend
+      - backend
+    restart: always
+    depends_on: 
+      - mongo
+
+    # volumes: 
+    #   - ./consumer/server:/usr/src/app
+      
+networks:
+  frontend:
+    driver: bridge
+  backend:
+    driver: bridge
